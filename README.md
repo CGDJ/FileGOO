@@ -190,7 +190,7 @@ int main(){
 
 #### Using verbose console output:
 
-By defining `FILE_GOO_VERBOSE_OUTPUT` before `#INCULDE "CopyManager.h" ` you can easily add helpful console output for debugging. 
+By defining `FILE_GOO_VERBOSE_OUTPUT` before `#INCULDE "FileGOO.h" ` you can easily add helpful console output for debugging. 
 
 ##### Verbose example:
 
