@@ -14,6 +14,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <fstream>
 
 #ifdef FILE_GOO_VERBOSE_OUTPUT
 #include <iostream>
@@ -40,6 +41,7 @@ struct FileGoo_FileDetails {
 		return std::filesystem::exists(filePath);
 	}
 	
+	
 #ifdef FILE_GOO_VERBOSE_OUTPUT
 	void printToConsole() {
 		//TODO
@@ -64,6 +66,14 @@ void CopyFolderStructureOnly(std::filesystem::path sourcePath_, std::filesystem:
 
 //Retrives file details about all files in a directory
 void FileGoo_AddToManifest(std::filesystem::path sourcePath_, std::vector<FileGoo_FileDetails>& manifest_) {
+	
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "__________________FileGoo_AddToManifest______________________" << std::endl;
+	int filecounter = 0;
+#endif // VERBOSE_OUTPUT
+	
+	
+	
 	//TODO
 	//std::filesystem reports error on some paths that include characters.
 	//using u16string() for paths and  u8string() for names seems to resolve issue but may cause the path to be unreadabe later 
@@ -84,9 +94,14 @@ void FileGoo_AddToManifest(std::filesystem::path sourcePath_, std::vector<FileGo
 			//Print to console if verbose output is required.  
 #ifdef FILE_GOO_VERBOSE_OUTPUT
 			info.printToConsole();
+			filecounter++;
 #endif // VERBOSE_OUTPUT
 		}
 	}
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "___Number of files added to manifest: "<<filecounter<<" _____________________________________________________________" << std::endl;
+#endif // VERBOSE_OUTPUT
 
 };
 
@@ -95,38 +110,91 @@ void FileGoo_FindInCommonManifests(std::vector<FileGoo_FileDetails>& manifest_,
 										   std::vector<FileGoo_FileDetails>& comparision_manifest_, 
 										   std::vector<FileGoo_FileDetails>& result_manifest_){
 
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "__________________FileGoo_FindInCommonManifests______________________" << std::endl;
+	int filecounter = 0;
+#endif // VERBOSE_OUTPUT
+	
 	for (auto& file : manifest_) {
 		for (auto& compfile : comparision_manifest_) {
 			if (file.compare(compfile)) {
 				// same file found 
 				result_manifest_.emplace_back(file);
+
+
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+				std::cout << "Duplicate found: " << file.fileName << std::endl;
+				filecounter++;
+#endif // FILE_GOO_VERBOSE_OUTPUT
+
+
 			}
 		}
 	}
+
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "____Number of duplicates found: " << filecounter << " ___________________________________________" << std::endl;
+#endif // FILE_GOO_VERBOSE_OUTPUT
 
 };
 
 void FileGoo_RemoveDulicatesInManifest(std::vector<FileGoo_FileDetails>& manifest_, std::vector<FileGoo_FileDetails>& duplicates_) {
 	
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "_______________________FileGOO_RemoveDuplicatesInManifest__________________________________"<< std::endl;
+	int dupsfound = 0;
+#endif // FILE_GOO_VERBOSE_OUTPUT
+
+	//faster forward looking check
 	for (int i = 0; i < manifest_.size(); i++) {
-		for (auto& file : manifest_) {
-			if (file.compare(manifest_.at(i)) && file.filePath != manifest_.at(i).filePath) {
-				duplicates_.emplace_back(file);
+		for (int j = i + 1; j < manifest_.size();j++) {
+			if(manifest_.at(i).compare(manifest_.at(j))){
+				duplicates_.emplace_back(manifest_.at(i));
 				manifest_.erase(manifest_.begin() + i);
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+				std::cout << "Duplicate found: "<< manifest_.at(i).fileName << std::endl;
+				dupsfound++;
+#endif // FILE_GOO_VERBOSE_OUTPUT
+
 				break;
 			}
+		
 		}
+	
 	}
 	manifest_.shrink_to_fit();
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout <<"____Number of duplicates found: "<< dupsfound<<" ___________________________________________" << std::endl;
+#endif // FILE_GOO_VERBOSE_OUTPUT
+
+
 }
 
 //Warning!! removes files in the manifest from the system you may not be able undo this!!!
 void FileGoo_DeleteManifestFiles(std::vector<FileGoo_FileDetails>& manifest_) {
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "_________________FileGoo_DeleteManifestFiles________________" << std::endl;
+#endif // FILE_GOO_VERBOSE_OUTPUT
+
 	for (auto& file : manifest_) {
 		if (file.isValid()) {
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+			std::cout << "Removed!: ";
+			file.printToConsole();
+#endif // FILE_GOO_VERBOSE_OUTPUT
+
 			std::filesystem::remove(file.filePath);
 		}
 	}
+
+#ifdef FILE_GOO_VERBOSE_OUTPUT
+	std::cout << "________________________________________________________" << std::endl;
+#endif // FILE_GOO_VERBOSE_OUTPUT
 }
 
 //Copy files found in a given manifest to a given location 
@@ -270,4 +338,42 @@ void FileGoo_MoveManifestFiles(std::filesystem::path copyDestinationPath_, std::
 	FileGoo_CopyManifestFiles(copyDestinationPath_, manifest_, copyOptions_);
 	//warning deletes files 
 	FileGoo_DeleteManifestFiles(manifest_);
+};
+
+
+//TODO
+// fix unicode conversion for read write of u16 characters 
+
+
+//write manifest to file 
+void FileGoo_WriteManifestTofile(std::vector<FileGoo_FileDetails>& manifest_, std::filesystem::path file_) {
+
+	std::ofstream outputFile(file_);
+	outputFile << "Number of files: " << manifest_.size() << "\n";
+	for (auto& file : manifest_) {
+		outputFile << file.fileName << "\n" << file.filePath.u8string() << "\n"
+			<< file.fileSize << "\n";
+
+	}
+	outputFile.close();
+
+};
+
+
+//Experimental(may fail if reading non u8 characters) Read a manifest from file. 
+void FileGoo_ReadManifestFromfile(std::vector<FileGoo_FileDetails>& manifest_, std::filesystem::path file_) {
+	
+	std::ifstream inputFile;
+	inputFile.open(file_);
+	if (inputFile.is_open()) {
+		FileGoo_FileDetails details;
+		std::string temp;
+		std::getline(inputFile,temp);
+		
+		while (inputFile >> details.fileName >> details.filePath >> details.fileSize) {
+			manifest_.emplace_back(details); 
+		}
+		inputFile.close();
+	}
+
 };
