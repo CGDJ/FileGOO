@@ -1,16 +1,24 @@
 # File GOO
 
-File GOO is a MIT licenced,  single C++ header file designed to allow quick file manipulation, whilst remaining lightweight and cross platform.
+File GOO is a MIT licenced,  single C++ header file designed to be lightweight and cross platform.
 
-Features:
+#### Features:
 
-- Uses only C++ (17) STL with no external dependencies.   
-- Create file manifests from directories. 
-- Find duplicate files.
-- Quickly copy and delete multiple files. 
-- Copy all files from a directory (including subfolders), with extension filtering. 
-- Copy directory structures without copying files. 
-- Extra Debugging info that can be compiled only when required. 
+- ##### Uses only C++ (17) STL with no external dependencies.   
+
+- ##### Create file manifests from directories.
+
+- ##### Find duplicate files.
+
+  Contains two modes to compare duplicate files. High level comparison to discover files with the same name and file size quickly. Buffered Byte level comparison to find files with the same content despite file name.  
+
+- ##### Quickly copy and delete multiple files. 
+
+- ##### Copy all files from a directory (including subfolders), with extension filtering. 
+
+- ##### Copy directory structures without copying files. 
+
+- ##### Extra Debugging info that can be compiled only when required. 
 
 
 
@@ -21,7 +29,7 @@ Features:
 Copy folder structure. 
 
 ```c++
-//Example code
+//Example code 
 #include "FileGOO.h"
 
 // replace with your paths 
@@ -95,7 +103,7 @@ int main(){
 
 ##### Example 4:
 
-Find duplicates in manifest (This is great if you have several instances of the same file in multiple folders). 
+Find duplicates in manifest (This is great if you have several instances of the same file in multiple folders).  
 
 ```c++
 //Example code
@@ -114,7 +122,10 @@ int main(){
     //create a new manifest with only dulpicates 
     std::vector<FileGoo_FileDetails> duplicates;
 	FileGoo_RemoveDulicatesInManifest(test1, duplicates);
-       
+    //To enable deep file comparison use: 
+    //FileGoo_RemoveDulicatesInManifest(test1, duplicates,true);
+   
+    
 	return 0;
 }
 ```
@@ -139,7 +150,7 @@ int main(){
 	FileGoo_AddToManifest(fromPath,manifest);
 
     //copy files
-    FileGoo_CopyManifestFiles(toPath,manifest)
+    FileGoo_CopyManifestFiles(toPath,manifest);
        
 	return 0;
 }
@@ -190,7 +201,7 @@ int main(){
 
 #### Using verbose console output:
 
-By defining `FILE_GOO_VERBOSE_OUTPUT` before `#INCULDE "FileGOO.h" ` you can easily add helpful console output for debugging. 
+By defining `FILE_GOO_VERBOSE_OUTPUT` before `#INCULDE "CopyManager.h" ` you can easily add helpful console output for debugging. 
 
 ##### Verbose example:
 
@@ -232,8 +243,6 @@ int main(){
 #### Know Issues
 
 - Non UTF8 characters may not be displayed/handled correctly. 
-
-
 
 
 
