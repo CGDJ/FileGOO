@@ -11,7 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 
 #pragma once
-#include <filesystem>
+#include <filesystem>// check you are using c++17 or later if you get errors. 
 #include <string>
 #include <vector>
 #include <fstream>
@@ -28,15 +28,58 @@ struct FileGoo_FileDetails {
 	std::string extenion = "";
 	int fileSize = -1; 
 
-	bool compare(FileGoo_FileDetails& other){ 
-		if (this->fileName == other.fileName && this->fileSize == other.fileSize) {
-			return true;
+	bool compare(FileGoo_FileDetails& other, bool deepCompare = false, int buffersize_ = 4096){ 
+		if (deepCompare) {
+			if (this->fileSize == other.fileSize) {
+				// only if file sizes are the same check bytes
+				return this->compareBytes(other, buffersize_);
+			}
+			else { return false; }
 		}
 		else {
-			return false;
+			if (this->fileName == other.fileName && this->fileSize == other.fileSize) {
+
+				return true;
+			}
+			else {
+				return false;
+			}
 		}
-	
 	}
+
+	bool compareBytes(FileGoo_FileDetails& other, int bufferSize_ = 4096) {
+		//buffers for each file 
+		char* array1 = new char[bufferSize_]();
+		char* array2 = new char[bufferSize_]();
+		//open each file 
+		std::ifstream file1(this->filePath, std::ifstream::binary);
+		std::ifstream file2(other.filePath, std::ifstream::binary);
+
+		// stop if we reach the end of the file 
+		while (!file1.eof() || !file2.eof()) {
+			// read data to buffer 
+			file1.read(array1, sizeof(&array1));
+			file2.read(array2, sizeof(&array2));
+
+			// check if the data is the same 
+			if (*array1 != *array2) {
+				file1.close();
+				file2.close();
+
+				// must be different files 
+				return false;
+			}
+			
+		}
+		file1.close();
+		file2.close();
+		// have the same content 
+		return true;
+	}
+
+
+
+
 	bool isValid() {
 		return std::filesystem::exists(filePath);
 	}
@@ -107,8 +150,10 @@ void FileGoo_AddToManifest(std::filesystem::path sourcePath_, std::vector<FileGo
 
 /*Finds files in the first manifest that exist in the second*/
 void FileGoo_FindInCommonManifests(std::vector<FileGoo_FileDetails>& manifest_,
-										   std::vector<FileGoo_FileDetails>& comparision_manifest_, 
-										   std::vector<FileGoo_FileDetails>& result_manifest_){
+									std::vector<FileGoo_FileDetails>& comparision_manifest_, 
+									std::vector<FileGoo_FileDetails>& result_manifest_,
+									bool deepCompare_ = false,
+									int bufferSize_ = 4096){
 
 #ifdef FILE_GOO_VERBOSE_OUTPUT
 	std::cout << "__________________FileGoo_FindInCommonManifests______________________" << std::endl;
@@ -117,7 +162,7 @@ void FileGoo_FindInCommonManifests(std::vector<FileGoo_FileDetails>& manifest_,
 	
 	for (auto& file : manifest_) {
 		for (auto& compfile : comparision_manifest_) {
-			if (file.compare(compfile)) {
+			if (file.compare(compfile, deepCompare_, bufferSize_)) {
 				// same file found 
 				result_manifest_.emplace_back(file);
 
@@ -140,7 +185,10 @@ void FileGoo_FindInCommonManifests(std::vector<FileGoo_FileDetails>& manifest_,
 
 };
 
-void FileGoo_RemoveDulicatesInManifest(std::vector<FileGoo_FileDetails>& manifest_, std::vector<FileGoo_FileDetails>& duplicates_) {
+void FileGoo_RemoveDulicatesInManifest(std::vector<FileGoo_FileDetails>& manifest_,
+										std::vector<FileGoo_FileDetails>& duplicates_,
+										bool deepCompare_ = false,
+										int bufferSize_ = 4096) {
 	
 #ifdef FILE_GOO_VERBOSE_OUTPUT
 	std::cout << "_______________________FileGOO_RemoveDuplicatesInManifest__________________________________"<< std::endl;
@@ -148,9 +196,9 @@ void FileGoo_RemoveDulicatesInManifest(std::vector<FileGoo_FileDetails>& manifes
 #endif // FILE_GOO_VERBOSE_OUTPUT
 
 	//faster forward looking check
-	for (int i = 0; i < manifest_.size(); i++) {
-		for (int j = i + 1; j < manifest_.size();j++) {
-			if(manifest_.at(i).compare(manifest_.at(j))){
+	for (unsigned int i = 0; i < manifest_.size(); i++) {
+		for (unsigned int j = i + 1; j < manifest_.size();j++) {
+			if(manifest_.at(i).compare(manifest_.at(j),deepCompare_,bufferSize_)){
 				duplicates_.emplace_back(manifest_.at(i));
 				manifest_.erase(manifest_.begin() + i);
 
